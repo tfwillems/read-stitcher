@@ -1,9 +1,12 @@
 #include <iostream>
 #include <fstream>
+#include <sstream>
 
+#include "error.h"
 #include "fastq_reader.h"
 #include "fastq_writer.h"
 #include "read_stitcher.h"
+#include "stringops.h"
 
 ReadStitcher::ReadStitcher(int max_read_len, int max_k, int min_bp_overlap, double min_frac_correct){
   this->max_read_len      = max_read_len;
@@ -109,7 +112,7 @@ ReadInfo ReadStitcher::merge_read_information(ReadInfo& r1, ReadInfo& r2, int st
     quality  += q2.substr(i);
   }
 
-  return ReadInfo(r1.get_identifier(), sequence, quality);
+  return ReadInfo("STITCHED_" + r1.get_identifier(), sequence, quality);
 }
 
 int ReadStitcher::stitch_reads(const std::string& s1, const std::string& s2){
@@ -126,92 +129,70 @@ int ReadStitcher::stitch_reads(const std::string& s1, const std::string& s2){
 }
 
 void ReadStitcher::stitch_fastq(std::string fastq_f1, std::string fastq_f2, std::string output_prefix){
-  FASTQReader f1_reader(fastq_f1, true);
-  FASTQReader f2_reader(fastq_f2, true);
+  FASTQReader f1_reader(fastq_f1, true, false);
+  FASTQReader f2_reader(fastq_f2, true, true);
   ReadInfo f1_read      = f1_reader.next_read();
   ReadInfo f2_read      = f2_reader.next_read();
   std::string prev_f1_id = f1_read.get_identifier();
   std::string prev_f2_id = f2_read.get_identifier();
 
-  FASTQWriter f1_writer(output_prefix + "_1.fastq");
-  FASTQWriter f2_writer(output_prefix + "_2.fastq");
-  FASTQWriter stitched(output_prefix  + "_stitched.fastq");
-  bool read_f1 = false;
-  bool read_f2 = false;
+  FASTQWriter f1_writer(output_prefix + "_1.fq.gz");
+  FASTQWriter f2_writer(output_prefix + "_2.fq.gz");
+  FASTQWriter stitched(output_prefix  + "_stitched.fq.gz");
+  int32_t skip_count = 0;
 
   while (true){
-    if (read_f1){
-      if (f1_reader.is_empty())
-	break;
-      f1_read = f1_reader.next_read();
-      if (f1_read.get_identifier().compare(prev_f1_id) <= 0){
-	std::cerr << "ERROR: FIle provided to read stitcher must be sorted by read identifier. Exiting..." << std::endl;
-	exit(1);
-      }
-      prev_f1_id = f1_read.get_identifier();
-      read_f1    = false;
+    if (f1_reader.is_empty())
+      break;
+    if (f2_reader.is_empty())
+      break;
+
+    f1_read = f1_reader.next_read();
+    f2_read = f2_reader.next_read();
+    if (f1_read.get_identifier().compare(f2_read.get_identifier()) != 0){
+      std::stringstream error;
+      error << "Mismatched read ids in FASTQ files:" << "\n"
+	    << "\t" << f1_read.get_identifier() << " and " << f2_read.get_identifier();
+      printErrorAndDie(error.str());
     }
 
-    if (read_f2){
-      if (f2_reader.is_empty())
-	break;
-      f2_read = f2_reader.next_read();
-      if (f2_read.get_identifier().compare(prev_f2_id) <= 0){
-	std::cerr << "ERROR: FIle provided to read stitcher must be sorted by read identifier. Exiting..." << std::endl;
-	exit(1);
-      }
-      prev_f2_id = f2_read.get_identifier();
-      read_f2    = false;
+    // Remove N's on ends of reads and low quality flanks
+    f1_read.trimNTails();
+    f2_read.trimNTails();
+    char min_qual = '5';
+    f1_read.trimLowQualityEnds(min_qual);
+    f2_read.trimLowQualityEnds(min_qual);
+    if (f1_read.empty() || f2_read.empty())
+      continue;
+
+    // Attempt to stitch the reads together
+    int max_match_idx;
+    int max_matches;
+    int best_frac_idx;
+    double best_frac;
+
+    // Skip reads with N's, as the suffix tree doesn't accommodate it
+    if (f1_read.get_sequence().find("N") != std::string::npos ||
+	f2_read.get_sequence().find("N") != std::string::npos){
+      skip_count++;
+      continue;
     }
 
-    int comp = f1_read.get_identifier().compare(f2_read.get_identifier());
-    if (comp == 0){
-      // Attempt to stitch the reads together
-      int max_match_idx;
-      int max_matches;
-      int best_frac_idx;
-      double best_frac;
-
-      kMismatch(f1_read.get_sequence(), f2_read.get_sequence(), &max_match_idx, &max_matches, &best_frac_idx, &best_frac);
-      if (best_frac_idx != -1){
-	// Stitching met requirements
-	printStitching(f1_read.get_sequence(), f2_read.get_sequence(), best_frac_idx);
-	ReadInfo stitched_read = merge_read_information(f1_read, f2_read, best_frac_idx);
-	stitched.write_read(stitched_read);
-      }
-      else {
-	// Stitching did not meet requirements
-	f1_writer.write_read(f1_read);
-	f2_writer.write_read(f2_read);
-      }
-      read_f1 = true;
-      read_f2 = true;
-    }
-    else if (comp < 0){
-      read_f1 = true;
-      f1_writer.write_read(f1_read);
+    kMismatch(f1_read.get_sequence(), f2_read.get_sequence(), &max_match_idx, &max_matches, &best_frac_idx, &best_frac);
+    if (best_frac_idx != -1){
+      // Stitching met requirements
+      //printStitching(f1_read.get_sequence(), f2_read.get_sequence(), best_frac_idx);
+      ReadInfo stitched_read = merge_read_information(f1_read, f2_read, best_frac_idx);
+      stitched.write_read(stitched_read);
     }
     else {
-      read_f2 = true;
+      // Stitching did not meet requirements
+      f1_writer.write_read(f1_read);
       f2_writer.write_read(f2_read);
-    }	
+    }
   }
 
-  // Output any remaining reads in f1 without mates
-  if (!read_f1)
-    f1_writer.write_read(f1_read);
-  while (!f1_reader.is_empty()){
-    f1_read = f1_reader.next_read();
-    f1_writer.write_read(f1_read);
-  }
-
-  // Output any remaining reads in f2 without mates
-  if (!read_f2)
-    f2_writer.write_read(f2_read);
-  while (!f2_reader.is_empty()){
-    f2_read = f2_reader.next_read();
-    f2_writer.write_read(f2_read);
-  }
+  std::cerr << "Skipped " << skip_count << " reads with N bases" << std::endl;
 
   f1_reader.close();
   f2_reader.close();
