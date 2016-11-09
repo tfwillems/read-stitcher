@@ -2,7 +2,7 @@
 
 FASTQWriter::FASTQWriter(std::string filename){
   this->filename = filename;
-  output.open(filename, std::ofstream::out);
+  output.open(filename.c_str());
 }
 
 FASTQWriter::~FASTQWriter(){
@@ -10,8 +10,7 @@ FASTQWriter::~FASTQWriter(){
 }
 
 void FASTQWriter::close(){
-  if (output.is_open())
-    output.close();
+  output.close();
 }
 
 void FASTQWriter::write_read(ReadInfo& read){
