@@ -57,7 +57,7 @@ ReadInfo FASTQReader::next_read(){
   }
 
   std::getline(input, next_line);
-  return ReadInfo(identifier.substr(1), sequence, quality);
+  return ReadInfo(identifier.substr(1), sequence, quality, rev_complement);
 }
 
 void FASTQReader::close(){

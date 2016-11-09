@@ -50,7 +50,6 @@ class LCA {
       num_bits++;
       val >>= 1;
     }
-    std::cout << "num_bits = " << num_bits << std::endl;
   }
 
   Node* lca(SuffixTree& tree, Node* x, Node* y);

@@ -112,7 +112,7 @@ ReadInfo ReadStitcher::merge_read_information(ReadInfo& r1, ReadInfo& r2, int st
     quality  += q2.substr(i);
   }
 
-  return ReadInfo("STITCHED_" + r1.get_identifier(), sequence, quality);
+  return ReadInfo("STITCHED_" + r1.get_identifier(), sequence, quality, false);
 }
 
 int ReadStitcher::stitch_reads(const std::string& s1, const std::string& s2){
