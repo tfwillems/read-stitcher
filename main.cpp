@@ -1,11 +1,14 @@
 #include <algorithm>
 #include <iostream>
+#include <sstream>
 #include <getopt.h>
 #include <stdlib.h>
 
-#include "lca.h"
+#include "error.h"
 #include "kmer_counter.h"
+#include "lca.h"
 #include "read_stitcher.h"
+#include "stringops.h"
 
 int    max_read_len;
 int    max_k;
@@ -79,18 +82,22 @@ int main(int argc, char **argv){
   check_entropy    = 1;
   min_entropy      = 0.0;
 	
-  std::string f1 = "";
-  std::string f2 = "";
+  std::string f1  = "";
+  std::string f2  = "";
+  std::string out = "";
   
   if (argc == 1){
     std::cout 
-      << "Usage: ReadStitcher --f1 <fq_1> --f2 <fq_2> [options]" << std::endl
-      << "\t" << "--check-entropy"              << std::endl
-      << "\t" << "--min-entropy      <FLOAT>"   << " Minimum entropy" << std::endl
-      << "\t" << "--min-frac-correct <FLOAT>"   << " Minimum fraction of overlapping bases that must match"  << std::endl
-      << "\t" << "--max-read-length  <INT>  "   << " Maximum read length to be considered"                   << std::endl
-      << "\t" << "--max-mismatches   <INT>  "   << " Maximum number of overlapping bases that can not match" << std::endl
-      << "\t" << "--min-overlap      <INT>  "   << " Minimum number of overlapping bases required "          << std::endl;
+      << "Usage: ReadStitcher --f1 <fq_1.gz> --f2 <fq_2.gz> --out <output_prefix> [options]"                   << "\n"
+      << "\t" << "--f1               <fq_1.gz>" << " Bgzipped FASTQ containing first  set of reads"            << "\n"
+      << "\t" << "--f2               <fq_2.gz>" << " Bgzipped FASTQ containing second set of reads"            << "\n"
+      << "\t" << "--out        <output_prefix>" << " Prefix for output files for stitched and unstitced reads" << "\n"
+      //<< "\t" << "--check-entropy"              << " " << "\n"
+      //<< "\t" << "--min-entropy      <FLOAT>"   << " Minimum entropy"                                        << "\n"
+      << "\t" << "--min-frac-correct <FLOAT>"   << " Minimum fraction of overlapping bases that must match"    << "\n"
+      << "\t" << "--max-read-length  <INT>  "   << " Maximum read length to be considered"                     << "\n"
+      << "\t" << "--max-mismatches   <INT>  "   << " Maximum number of overlapping bases that can not match"   << "\n"
+      << "\t" << "--min-overlap      <INT>  "   << " Minimum number of overlapping bases required "            << "\n" << std::endl;
     exit(0);
   }
 
@@ -102,11 +109,13 @@ int main(int argc, char **argv){
     {"min-frac-correct", required_argument, 0, 'f'},
     {"max-read-length",  required_argument, 0, 'l'},
     {"max-mismatches",   required_argument, 0, 'm'},
-    {"min-overlap",      required_argument, 0, 'o'}
+    {"min-overlap",      required_argument, 0, 'o'},
+    {"out",              required_argument, 0, 'p'},
+    {0, 0, 0, 0}
   };
 
   int c;
-  while (1){
+  while (true){
     int option_index = 0;
     c = getopt_long(argc, argv, "a:b:e:f:l:m:o:", long_options, &option_index);
     if (c == -1)
@@ -135,6 +144,9 @@ int main(int argc, char **argv){
     case 'o':
       min_bp_overlap = atoi(optarg);
       break;
+    case 'p':
+      out = std::string(optarg);
+      break;
     case '?':
       break;
     default:
@@ -142,12 +154,27 @@ int main(int argc, char **argv){
       break;
     }
   }
-  
 
-  if (f1.empty() || f2.empty()){
-    std::cerr << "ERROR: Missing input file(s). Exiting..." << std::endl;
-    exit(1);
+  if (optind < argc) {
+    std::stringstream msg;
+    msg << "Did not recognize the following command line arguments:" << "\n";
+    while (optind < argc)
+      msg << "\t" << argv[optind++] << "\n";
+    msg << "Please check your command line syntax or type ./ReadStitcher --help for additional information" << "\n";
+    printErrorAndDie(msg.str());
   }
+
+  if (f1.empty())
+    printErrorAndDie("--f1 argument required");
+  if (f2.empty())
+    printErrorAndDie("--f2 argument required");
+  if (out.empty())
+    printErrorAndDie("--out argument required");
+  if (!string_ends_with(f1, ".gz"))
+    printErrorAndDie("Argument to --f1 must be a bgzipped FASTQ file (and end in .gz)");
+  if (!string_ends_with(f2, ".gz"))
+    printErrorAndDie("Argument to --f2 must be a bgzipped FASTQ file (and end in .gz)");
+
   
   ReadStitcher stitcher(max_read_len, max_k, min_bp_overlap, min_frac_correct);
   
@@ -157,7 +184,8 @@ int main(int argc, char **argv){
   std::vector<int>         r_start;
   
   //100,100
-  
+
+  /*  
   generateReads(10000, max_read_len, l_reads, r_reads, l_start, r_start, 0.01);
   for(int i = 0; i < l_reads.size(); i++){
     int best_frac_idx = stitcher.stitch_reads(l_reads[i], r_reads[i]);
@@ -166,4 +194,8 @@ int main(int argc, char **argv){
       std::cout << std::endl;
     }
   }
+  */
+
+
+  stitcher.stitch_fastq(f1, f2, out);
 }
