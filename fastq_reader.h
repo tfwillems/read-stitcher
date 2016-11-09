@@ -5,15 +5,18 @@
 #include <string>
 
 #include "read_info.h"
+#include "bgzf_streams.h"
 
 class FASTQReader {
 private:
   std::string filename;
-  std::ifstream input;
+  bgzfistream input;
   bool paired_end;
+  bool rev_complement;
+  std::string next_line;
 
 public:
-  FASTQReader(std::string file, bool paired_end);
+  FASTQReader(std::string file, bool paired_end, bool reverse_complement);
   ~FASTQReader();
 
   bool is_empty();
