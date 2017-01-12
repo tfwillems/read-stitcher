@@ -75,32 +75,35 @@ void generateReads(int num_reads, int read_length, std::vector<std::string>& rea
   mutate(reads_b, mutation_rate);
 }
 
+void print_usage(){
+   std::cout
+      << "Usage: ReadStitcher --f1 <fq_1.gz> --f2 <fq_2.gz> --out <prefix> [options]"                                        << "\n"
+      << "\t" << "--f1               <fq_1.gz> " << "\t" << " Bgzipped FASTQ containing first  set of reads"                 << "\n"
+      << "\t" << "--f2               <fq_2.gz> " << "\t" << " Bgzipped FASTQ containing second set of reads"                 << "\n"
+      << "\t" << "--out              <prefix>  " << "\t" << " Prefix for output files for stitched and unstitched reads"     << "\n"
+      << "\t" << "--min-frac-correct <FLOAT>   " << "\t" << " Minimum fraction of overlapping bases that must match (Default = "  << min_frac_correct << ")" << "\n"
+      << "\t" << "--max-read-length  <INT>     " << "\t" << " Maximum read length to be considered (Default = "                   << max_read_len     << ")" << "\n"
+      << "\t" << "--max-mismatches   <INT>     " << "\t" << " Maximum number of overlapping bases that can not match (Default = " << max_k            << ")" << "\n"
+      << "\t" << "--min-overlap      <INT>     " << "\t" << " Minimum number of overlapping bases required (Default = "           << min_bp_overlap   << ")" << "\n"
+      << "\t" << "--help                       " << "\t" << " Print this help message and exit"                                                              << "\n"
+      << "\t" << "--version                    " << "\t" << " Print ReadStitcher version and exit"                                                           << "\n" << std::endl;
+    exit(0);
+}
+
 
 int main(int argc, char **argv){
   // Default parameter settings
-  max_read_len     = 100;
-  max_k            = 10;
-  min_bp_overlap   = 10;
-  min_frac_correct = 0.9;
-	
+  max_read_len      = 100;
+  max_k             = 10;
+  min_bp_overlap    = 10;
+  min_frac_correct  = 0.9;
   std::string f1    = "";
   std::string f2    = "";
   std::string out   = "";
-  int print_version = 0;
+  int print_version = 0, print_help = 0;
   
-  if (argc == 1){
-    std::cout 
-      << "Usage: ReadStitcher --f1 <fq_1.gz> --f2 <fq_2.gz> --out <prefix> [options]"                   << "\n"
-      << "\t" << "--f1               <fq_1.gz> " << "\t" << " Bgzipped FASTQ containing first  set of reads"             << "\n"
-      << "\t" << "--f2               <fq_2.gz> " << "\t" << " Bgzipped FASTQ containing second set of reads"             << "\n"
-      << "\t" << "--out              <prefix>  " << "\t" << " Prefix for output files for stitched and unstitched reads" << "\n"
-      << "\t" << "--min-frac-correct <FLOAT>   " << "\t" << " Minimum fraction of overlapping bases that must match"     << "\n"
-      << "\t" << "--max-read-length  <INT>     " << "\t" << " Maximum read length to be considered"                      << "\n"
-      << "\t" << "--max-mismatches   <INT>     " << "\t" << " Maximum number of overlapping bases that can not match"    << "\n"
-      << "\t" << "--min-overlap      <INT>     " << "\t" << " Minimum number of overlapping bases required "             << "\n"
-      << "\t" << "--version                    " << "\t" << " Print ReadStitcher version and exit"                       << "\n" << std::endl;
-    exit(0);
-  }
+  if (argc == 1)
+    print_usage();
 
   static struct option long_options[] = {
     {"f1",               required_argument, 0, 'a'},
@@ -110,6 +113,7 @@ int main(int argc, char **argv){
     {"max-mismatches",   required_argument, 0, 'm'},
     {"min-overlap",      required_argument, 0, 'o'},
     {"out",              required_argument, 0, 'p'},
+    {"help",        no_argument, &print_help,    1},
     {"version",     no_argument, &print_version, 1},
     {0, 0, 0, 0}
   };
@@ -165,6 +169,9 @@ int main(int argc, char **argv){
     std::cerr << "ReadStitcher version " << VERSION << std::endl;
     exit(0);
   }
+
+  if (print_help == 1)
+    print_usage();
 
   if (f1.empty())
     printErrorAndDie("--f1 argument required");
