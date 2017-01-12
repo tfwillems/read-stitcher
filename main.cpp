@@ -14,8 +14,10 @@ int    max_read_len;
 int    max_k;
 int    min_bp_overlap;
 double min_frac_correct;
-int    check_entropy;
-double min_entropy;
+
+bool file_exists(std::string path){
+  return (access(path.c_str(), F_OK) != -1);
+}
 
 void printStitching(std::string& s1, std::string& s2, int index){
   std::cout << s1 << std::endl;
@@ -79,8 +81,6 @@ int main(int argc, char **argv){
   max_k            = 10;
   min_bp_overlap   = 10;
   min_frac_correct = 0.9;
-  check_entropy    = 1;
-  min_entropy      = 0.0;
 	
   std::string f1  = "";
   std::string f2  = "";
@@ -88,24 +88,20 @@ int main(int argc, char **argv){
   
   if (argc == 1){
     std::cout 
-      << "Usage: ReadStitcher --f1 <fq_1.gz> --f2 <fq_2.gz> --out <output_prefix> [options]"                   << "\n"
-      << "\t" << "--f1               <fq_1.gz>" << " Bgzipped FASTQ containing first  set of reads"            << "\n"
-      << "\t" << "--f2               <fq_2.gz>" << " Bgzipped FASTQ containing second set of reads"            << "\n"
-      << "\t" << "--out        <output_prefix>" << " Prefix for output files for stitched and unstitced reads" << "\n"
-      //<< "\t" << "--check-entropy"              << " " << "\n"
-      //<< "\t" << "--min-entropy      <FLOAT>"   << " Minimum entropy"                                        << "\n"
-      << "\t" << "--min-frac-correct <FLOAT>"   << " Minimum fraction of overlapping bases that must match"    << "\n"
-      << "\t" << "--max-read-length  <INT>  "   << " Maximum read length to be considered"                     << "\n"
-      << "\t" << "--max-mismatches   <INT>  "   << " Maximum number of overlapping bases that can not match"   << "\n"
-      << "\t" << "--min-overlap      <INT>  "   << " Minimum number of overlapping bases required "            << "\n" << std::endl;
+      << "Usage: ReadStitcher --f1 <fq_1.gz> --f2 <fq_2.gz> --out <prefix> [options]"                   << "\n"
+      << "\t" << "--f1               <fq_1.gz> " << "\t" << " Bgzipped FASTQ containing first  set of reads"            << "\n"
+      << "\t" << "--f2               <fq_2.gz> " << "\t" << " Bgzipped FASTQ containing second set of reads"            << "\n"
+      << "\t" << "--out              <prefix>  " << "\t" << " Prefix for output files for stitched and unstitced reads" << "\n"
+      << "\t" << "--min-frac-correct <FLOAT>   " << "\t" << " Minimum fraction of overlapping bases that must match"    << "\n"
+      << "\t" << "--max-read-length  <INT>     " << "\t" << " Maximum read length to be considered"                     << "\n"
+      << "\t" << "--max-mismatches   <INT>     " << "\t" << " Maximum number of overlapping bases that can not match"   << "\n"
+      << "\t" << "--min-overlap      <INT>     " << "\t" << " Minimum number of overlapping bases required "            << "\n" << std::endl;
     exit(0);
   }
 
   static struct option long_options[] = {
-    {"check-entropy",    no_argument,  &check_entropy, 1},
     {"f1",               required_argument, 0, 'a'},
     {"f2",               required_argument, 0, 'b'},
-    {"min-entropy",      required_argument, 0, 'e'},
     {"min-frac-correct", required_argument, 0, 'f'},
     {"max-read-length",  required_argument, 0, 'l'},
     {"max-mismatches",   required_argument, 0, 'm'},
@@ -117,7 +113,7 @@ int main(int argc, char **argv){
   int c;
   while (true){
     int option_index = 0;
-    c = getopt_long(argc, argv, "a:b:e:f:l:m:o:", long_options, &option_index);
+    c = getopt_long(argc, argv, "a:b:f:l:m:o:", long_options, &option_index);
     if (c == -1)
       break;
     switch (c){
@@ -128,9 +124,6 @@ int main(int argc, char **argv){
       break;
     case 'b':
       f2 = std::string(optarg);
-      break;
-    case 'e':
-      min_entropy = atof(optarg);
       break;
     case 'f':
       min_frac_correct = atof(optarg);
@@ -174,6 +167,10 @@ int main(int argc, char **argv){
     printErrorAndDie("Argument to --f1 must be a bgzipped FASTQ file (and end in .gz)");
   if (!string_ends_with(f2, ".gz"))
     printErrorAndDie("Argument to --f2 must be a bgzipped FASTQ file (and end in .gz)");
+  if (!file_exists(f1))
+    printErrorAndDie("Argument to --f1 is not a valid file path");
+  if (!file_exists(f2))
+    printErrorAndDie("Argument to --f2 is not a valid file path");
 
   
   ReadStitcher stitcher(max_read_len, max_k, min_bp_overlap, min_frac_correct);
@@ -195,7 +192,6 @@ int main(int argc, char **argv){
     }
   }
   */
-
 
   stitcher.stitch_fastq(f1, f2, out);
 }
