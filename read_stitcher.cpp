@@ -29,8 +29,8 @@ void ReadStitcher::printStitching(const std::string& s1, const std::string& s2, 
 }
 
 void ReadStitcher::kMismatch(const std::string& s1, const std::string& s2, int* max_match_idx, int* max_matches, int* best_frac_idx, double* best_frac){
-  std::string  exp = s1 + '#' + s2;
-  char separator = '#';
+  std::string exp = s1 + '#' + s2;
+  char separator  = '#';
   SuffixTree tree(exp);
 
   lca->processTree(tree);
@@ -39,13 +39,17 @@ void ReadStitcher::kMismatch(const std::string& s1, const std::string& s2, int* 
   *max_matches    = -1;
   *max_match_idx  = -1;
 
-  for(int i = std::max(0, ((int)s1.size())-((int)s2.size())); i < ((int)s1.size()) - min_bp_overlap; i++){
+  for (int i = 0; i < ((int)s1.size()) - min_bp_overlap; i++){
     int sfx_offset_1 = 0;
     int sfx_offset_2 = 0;
 
     int k;
-    for(k = 0; k < max_k; k++){
-      //+1 due to separator character
+    for (k = 0; k < max_k; k++){
+      // +1 due the way in which we increment the offsets (as we assume the match is followed by a mismatch)
+      if (sfx_offset_2 == 1+s2.size())
+	break;
+
+      // +1 due to separator character
       int nmatch = lca->longestPrefix(tree, i+sfx_offset_1, s1.size()+1+sfx_offset_2);
 
       if (exp[i+sfx_offset_1+nmatch] == separator){
@@ -58,8 +62,9 @@ void ReadStitcher::kMismatch(const std::string& s1, const std::string& s2, int* 
       sfx_offset_2 += nmatch+1;
     }
 
+
     // Check if stitching was successful
-    if (i+sfx_offset_1 == s1.size()){
+    if (i+sfx_offset_1 == s1.size() || (s2.size() >= min_bp_overlap && sfx_offset_2 == 1+s2.size())){
       double frac = 1.0*(sfx_offset_1-k)/sfx_offset_1;
 
       // Check if stiching satisfies minimum fraction requirement
@@ -131,15 +136,15 @@ int ReadStitcher::stitch_reads(const std::string& s1, const std::string& s2){
 void ReadStitcher::stitch_fastq(std::string fastq_f1, std::string fastq_f2, std::string output_prefix){
   FASTQReader f1_reader(fastq_f1, true, false);
   FASTQReader f2_reader(fastq_f2, true, true);
-  ReadInfo f1_read      = f1_reader.next_read();
-  ReadInfo f2_read      = f2_reader.next_read();
+  ReadInfo f1_read       = f1_reader.next_read();
+  ReadInfo f2_read       = f2_reader.next_read();
   std::string prev_f1_id = f1_read.get_identifier();
   std::string prev_f2_id = f2_read.get_identifier();
 
   FASTQWriter f1_writer(output_prefix + "_1.fq.gz");
   FASTQWriter f2_writer(output_prefix + "_2.fq.gz");
   FASTQWriter stitched(output_prefix  + "_stitched.fq.gz");
-  int32_t skip_count = 0;
+  int32_t skip_count = 0, success_count = 0, fail_count = 0;
 
   while (true){
     if (f1_reader.is_empty())
@@ -165,6 +170,10 @@ void ReadStitcher::stitch_fastq(std::string fastq_f1, std::string fastq_f2, std:
     if (f1_read.empty() || f2_read.empty())
       continue;
 
+    // Skip reads that exceed the max length, as they'll break the LCA computation
+    if (f1_read.get_sequence().size() > max_read_len || f2_read.get_sequence().size() > max_read_len)
+      continue;
+
     // Attempt to stitch the reads together
     int max_match_idx;
     int max_matches;
@@ -184,15 +193,29 @@ void ReadStitcher::stitch_fastq(std::string fastq_f1, std::string fastq_f2, std:
       //printStitching(f1_read.get_sequence(), f2_read.get_sequence(), best_frac_idx);
       ReadInfo stitched_read = merge_read_information(f1_read, f2_read, best_frac_idx);
       stitched.write_read(stitched_read);
+      success_count++;
     }
     else {
-      // Stitching did not meet requirements
-      f1_writer.write_read(f1_read);
-      f2_writer.write_read(f2_read);
+      // Retry stitching, reversing which read we assume comes upstream
+      kMismatch(f2_read.get_sequence(), f1_read.get_sequence(), &max_match_idx, &max_matches, &best_frac_idx, &best_frac);
+      if (best_frac_idx != -1){
+	// Stitching met requirements
+	//printStitching(f2_read.get_sequence(), f1_read.get_sequence(), best_frac_idx);
+	ReadInfo stitched_read = merge_read_information(f2_read, f1_read, best_frac_idx);
+	stitched.write_read(stitched_read);
+	success_count++;
+      }
+      else {
+	// Stitching did not meet requirements
+	f1_writer.write_read(f1_read);
+	f2_writer.write_read(f2_read);
+	fail_count++;
+      }
     }
   }
 
   std::cerr << "Skipped " << skip_count << " reads with N bases" << std::endl;
+  std::cerr << "Stitching succeeded for " << success_count << " out of " << (success_count+fail_count) << " pairs of reads (" << (100.0*success_count/(success_count+fail_count)) << "%)" << std::endl;
 
   f1_reader.close();
   f2_reader.close();
