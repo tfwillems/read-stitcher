@@ -91,14 +91,14 @@ int main(int argc, char **argv){
   if (argc == 1){
     std::cout 
       << "Usage: ReadStitcher --f1 <fq_1.gz> --f2 <fq_2.gz> --out <prefix> [options]"                   << "\n"
-      << "\t" << "--f1               <fq_1.gz> " << "\t" << " Bgzipped FASTQ containing first  set of reads"            << "\n"
-      << "\t" << "--f2               <fq_2.gz> " << "\t" << " Bgzipped FASTQ containing second set of reads"            << "\n"
-      << "\t" << "--out              <prefix>  " << "\t" << " Prefix for output files for stitched and unstitced reads" << "\n"
-      << "\t" << "--min-frac-correct <FLOAT>   " << "\t" << " Minimum fraction of overlapping bases that must match"    << "\n"
-      << "\t" << "--max-read-length  <INT>     " << "\t" << " Maximum read length to be considered"                     << "\n"
-      << "\t" << "--max-mismatches   <INT>     " << "\t" << " Maximum number of overlapping bases that can not match"   << "\n"
-      << "\t" << "--min-overlap      <INT>     " << "\t" << " Minimum number of overlapping bases required "            << "\n"
-      << "\t" << "--version                    " << "\t" << " Print ReadStitcher version and exit"                      << "\n" << std::endl;
+      << "\t" << "--f1               <fq_1.gz> " << "\t" << " Bgzipped FASTQ containing first  set of reads"             << "\n"
+      << "\t" << "--f2               <fq_2.gz> " << "\t" << " Bgzipped FASTQ containing second set of reads"             << "\n"
+      << "\t" << "--out              <prefix>  " << "\t" << " Prefix for output files for stitched and unstitched reads" << "\n"
+      << "\t" << "--min-frac-correct <FLOAT>   " << "\t" << " Minimum fraction of overlapping bases that must match"     << "\n"
+      << "\t" << "--max-read-length  <INT>     " << "\t" << " Maximum read length to be considered"                      << "\n"
+      << "\t" << "--max-mismatches   <INT>     " << "\t" << " Maximum number of overlapping bases that can not match"    << "\n"
+      << "\t" << "--min-overlap      <INT>     " << "\t" << " Minimum number of overlapping bases required "             << "\n"
+      << "\t" << "--version                    " << "\t" << " Print ReadStitcher version and exit"                       << "\n" << std::endl;
     exit(0);
   }
 
