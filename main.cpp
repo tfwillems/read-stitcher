@@ -9,6 +9,7 @@
 #include "lca.h"
 #include "read_stitcher.h"
 #include "stringops.h"
+#include "version.h"
 
 int    max_read_len;
 int    max_k;
@@ -82,9 +83,10 @@ int main(int argc, char **argv){
   min_bp_overlap   = 10;
   min_frac_correct = 0.9;
 	
-  std::string f1  = "";
-  std::string f2  = "";
-  std::string out = "";
+  std::string f1    = "";
+  std::string f2    = "";
+  std::string out   = "";
+  int print_version = 0;
   
   if (argc == 1){
     std::cout 
@@ -95,7 +97,8 @@ int main(int argc, char **argv){
       << "\t" << "--min-frac-correct <FLOAT>   " << "\t" << " Minimum fraction of overlapping bases that must match"    << "\n"
       << "\t" << "--max-read-length  <INT>     " << "\t" << " Maximum read length to be considered"                     << "\n"
       << "\t" << "--max-mismatches   <INT>     " << "\t" << " Maximum number of overlapping bases that can not match"   << "\n"
-      << "\t" << "--min-overlap      <INT>     " << "\t" << " Minimum number of overlapping bases required "            << "\n" << std::endl;
+      << "\t" << "--min-overlap      <INT>     " << "\t" << " Minimum number of overlapping bases required "            << "\n"
+      << "\t" << "--version                    " << "\t" << " Print ReadStitcher version and exit"                      << "\n" << std::endl;
     exit(0);
   }
 
@@ -107,6 +110,7 @@ int main(int argc, char **argv){
     {"max-mismatches",   required_argument, 0, 'm'},
     {"min-overlap",      required_argument, 0, 'o'},
     {"out",              required_argument, 0, 'p'},
+    {"version",     no_argument, &print_version, 1},
     {0, 0, 0, 0}
   };
 
@@ -155,6 +159,11 @@ int main(int argc, char **argv){
       msg << "\t" << argv[optind++] << "\n";
     msg << "Please check your command line syntax or type ./ReadStitcher --help for additional information" << "\n";
     printErrorAndDie(msg.str());
+  }
+
+  if (print_version == 1){
+    std::cerr << "ReadStitcher version " << VERSION << std::endl;
+    exit(0);
   }
 
   if (f1.empty())

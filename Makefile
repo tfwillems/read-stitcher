@@ -21,7 +21,7 @@ LDFLAGS=
 endif
 
 ## Source code files, add new files to this list
-SRC_COMMON  = error.cpp fastq_reader.cpp fastq_writer.cpp kmer_counter.cpp lca.cpp read_info.cpp read_stitcher.cpp stringops.cpp suffix_tree.cpp 
+SRC_COMMON  = error.cpp fastq_reader.cpp fastq_writer.cpp kmer_counter.cpp lca.cpp read_info.cpp read_stitcher.cpp stringops.cpp suffix_tree.cpp version.cpp
 SRC_MAIN    = main.cpp
 
 # For each CPP file, generate an object file
