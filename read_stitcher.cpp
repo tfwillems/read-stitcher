@@ -147,7 +147,7 @@ int ReadStitcher::stitch_reads(const std::string& s1, const std::string& s2, int
     return -1;
 }
 
-void ReadStitcher::stitch_fastq(std::string fastq_f1, std::string fastq_f2, std::string output_prefix){
+void ReadStitcher::stitch_fastq(std::string fastq_f1, std::string fastq_f2, std::string output_prefix, std::ostream& log){
   FASTQReader f1_reader(fastq_f1, true, false);
   FASTQReader f2_reader(fastq_f2, true, true);
   ReadInfo f1_read       = f1_reader.next_read();
@@ -235,11 +235,11 @@ void ReadStitcher::stitch_fastq(std::string fastq_f1, std::string fastq_f2, std:
   }
 
   if (length_skip_count != 0)
-    std::cerr << "Skipped " << length_skip_count << " reads whose length was greater than " << max_read_len << "\n"
+    log << "Skipped " << length_skip_count << " reads whose length was greater than " << max_read_len << "\n"
 	      << "\t" << "If this is a significant fraction of your dataset, consider increasing --max-read-length" << std::endl;
   if (N_skip_count != 0)
-    std::cerr << "Skipped " << N_skip_count << " reads with N bases" << std::endl;
-  std::cerr << "Stitching succeeded for " << success_count << " out of " << (success_count+fail_count) << " remaining pairs of reads (" << (100.0*success_count/(success_count+fail_count)) << "%)" << std::endl;
+    log << "Skipped " << N_skip_count << " reads with N bases" << std::endl;
+  log << "Stitching succeeded for " << success_count << " out of " << (success_count+fail_count) << " remaining pairs of reads (" << (100.0*success_count/(success_count+fail_count)) << "%)" << std::endl;
 
   f1_reader.close();
   f2_reader.close();

@@ -77,16 +77,17 @@ void generateReads(int num_reads, int read_length, std::vector<std::string>& rea
 
 void print_usage(){
    std::cout
-      << "Usage: ReadStitcher --f1 <fq_1.gz> --f2 <fq_2.gz> --out <prefix> [options]"                                        << "\n"
-      << "\t" << "--f1               <fq_1.gz> " << "\t" << " Bgzipped FASTQ containing first  set of reads"                 << "\n"
-      << "\t" << "--f2               <fq_2.gz> " << "\t" << " Bgzipped FASTQ containing second set of reads"                 << "\n"
-      << "\t" << "--out              <prefix>  " << "\t" << " Prefix for output files for stitched and unstitched reads"     << "\n"
-      << "\t" << "--min-frac-correct <FLOAT>   " << "\t" << " Minimum fraction of overlapping bases that must match (Default = "  << min_frac_correct << ")" << "\n"
-      << "\t" << "--max-read-length  <INT>     " << "\t" << " Maximum read length to be considered (Default = "                   << max_read_len     << ")" << "\n"
-      << "\t" << "--max-mismatches   <INT>     " << "\t" << " Maximum number of overlapping bases that can not match (Default = " << max_k            << ")" << "\n"
-      << "\t" << "--min-overlap      <INT>     " << "\t" << " Minimum number of overlapping bases required (Default = "           << min_bp_overlap   << ")" << "\n"
-      << "\t" << "--help                       " << "\t" << " Print this help message and exit"                                                              << "\n"
-      << "\t" << "--version                    " << "\t" << " Print ReadStitcher version and exit"                                                           << "\n" << std::endl;
+      << "Usage: ReadStitcher --f1 <fq_1.gz> --f2 <fq_2.gz> --out <prefix> --log <log_file.txt> [options]"                        << "\n"
+      << "\t" << "--f1               <fq_1.gz>      " << "\t" << " Bgzipped FASTQ containing first  set of reads"                 << "\n"
+      << "\t" << "--f2               <fq_2.gz>      " << "\t" << " Bgzipped FASTQ containing second set of reads"                 << "\n"
+      << "\t" << "--out              <prefix>       " << "\t" << " Prefix for output files for stitched and unstitched reads"     << "\n"
+      << "\t" << "--log              <log_file.txt> " << "\t" << " Path for log file output"                                      << "\n"
+      << "\t" << "--min-frac-correct <FLOAT>        " << "\t" << " Minimum fraction of overlapping bases that must match (Default = "  << min_frac_correct << ")" << "\n"
+      << "\t" << "--max-read-length  <INT>          " << "\t" << " Maximum read length to be considered (Default = "                   << max_read_len     << ")" << "\n"
+      << "\t" << "--max-mismatches   <INT>          " << "\t" << " Maximum number of overlapping bases that can not match (Default = " << max_k            << ")" << "\n"
+      << "\t" << "--min-overlap      <INT>          " << "\t" << " Minimum number of overlapping bases required (Default = "           << min_bp_overlap   << ")" << "\n"
+      << "\t" << "--help                            " << "\t" << " Print this help message and exit"                                                              << "\n"
+      << "\t" << "--version                         " << "\t" << " Print ReadStitcher version and exit"                                                           << "\n" << std::endl;
     exit(0);
 }
 
@@ -100,6 +101,7 @@ int main(int argc, char **argv){
   std::string f1    = "";
   std::string f2    = "";
   std::string out   = "";
+  std::string log   = "";
   int print_version = 0, print_help = 0;
   
   if (argc == 1)
@@ -113,6 +115,7 @@ int main(int argc, char **argv){
     {"max-mismatches",   required_argument, 0, 'm'},
     {"min-overlap",      required_argument, 0, 'o'},
     {"out",              required_argument, 0, 'p'},
+    {"log",              required_argument, 0, 'r'},
     {"help",        no_argument, &print_help,    1},
     {"version",     no_argument, &print_version, 1},
     {0, 0, 0, 0}
@@ -148,7 +151,11 @@ int main(int argc, char **argv){
     case 'p':
       out = std::string(optarg);
       break;
+    case 'r':
+      log = std::string(optarg);
+      break;
     case '?':
+      printErrorAndDie("Unrecognized command line option");
       break;
     default:
       abort();
@@ -179,6 +186,8 @@ int main(int argc, char **argv){
     printErrorAndDie("--f2 argument required");
   if (out.empty())
     printErrorAndDie("--out argument required");
+  if (log.empty())
+    printErrorAndDie("--log argument required");
   if (!string_ends_with(f1, ".gz"))
     printErrorAndDie("Argument to --f1 must be a bgzipped FASTQ file (and end in .gz)");
   if (!string_ends_with(f2, ".gz"))
@@ -188,9 +197,12 @@ int main(int argc, char **argv){
   if (!file_exists(f2))
     printErrorAndDie("Argument to --f2 is not a valid file path");
 
+  std::ofstream log_stream;
+  log_stream.open(log, std::ofstream::out);
+  if (!log_stream.is_open())
+    printErrorAndDie("Failed to open the log file: " + log);
   
   ReadStitcher stitcher(max_read_len, max_k, min_bp_overlap, min_frac_correct);
-  
   std::vector<std::string> l_reads;
   std::vector<std::string> r_reads;
   std::vector<int>         l_start;
@@ -209,5 +221,7 @@ int main(int argc, char **argv){
   }
   */
 
-  stitcher.stitch_fastq(f1, f2, out);
+  stitcher.stitch_fastq(f1, f2, out, log_stream);
+  stitcher.print_base_qual_stats(log_stream);
+  log_stream.close();
 }

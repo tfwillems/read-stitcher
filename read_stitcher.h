@@ -27,7 +27,7 @@ public:
   ~ReadStitcher();
 
   int stitch_reads(const std::string& s1, const std::string& s2, int& num_bp_overlap, int& num_mismatches);
-  void stitch_fastq(std::string fastq_f1, std::string fastq_f2, std::string output_prefix);
+  void stitch_fastq(std::string fastq_f1, std::string fastq_f2, std::string output_prefix, std::ostream& log);
   void kMismatch(const std::string& s1, const std::string& s2, int* best_frac_idx, double* best_frac, int& num_bp_overlap, int& num_mismatches);
   void print_base_qual_stats(std::ostream& out);
 };
