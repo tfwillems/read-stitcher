@@ -1,54 +1,59 @@
 #include "read_info.h"
 
 void ReadInfo::trimNTails(){
-  int start = 0, end = sequence.size()-1;
-  while (start < sequence.size()){
-    if (sequence[start] != 'N')
+  int start = 0, end = sequence_.size()-1;
+  while (start < sequence_.size()){
+    if (sequence_[start] != 'N')
       break;
     start++;
   }
 
   while (end >= 0){
-    if (sequence[end] != 'N')
+    if (sequence_[end] != 'N')
       break;
     end--;
   }
 
   if (start <= end){
-    std::string new_seq  = sequence.substr(start, end-start+1);
-    std::string new_qual = quality.substr(start,  end-start+1);
-    sequence = new_seq;
-    quality  = new_qual;
+    std::string new_seq  = sequence_.substr(start, end-start+1);
+    std::string new_qual = quality_.substr(start,  end-start+1);
+    ltrim_   += start;
+    rtrim_   += (sequence_.size()-1-end);
+    sequence_ = new_seq;
+    quality_  = new_qual;
   }
   else {
-    sequence = "";
-    quality  = "";
+    sequence_ = "";
+    quality_  = "";
+    ltrim_   += start;
   }
 }
 
-
 void ReadInfo::trimLowQualityEnds(char min_qual){
-  int start = 0, end = sequence.size()-1;
-  while (start < quality.size()){
-    if (quality[start] >= min_qual)
+  int start = 0, end = sequence_.size()-1;
+  while (start < quality_.size()){
+    if (quality_[start] >= min_qual)
       break;
     start++;
   }
 
   while (end >= 0){
-    if (quality[end] >= min_qual)
+    if (quality_[end] >= min_qual)
       break;
     end--;
   }
 
   if (start <= end){
-    std::string new_seq  = sequence.substr(start, end-start+1);
-    std::string new_qual = quality.substr(start,  end-start+1);
-    sequence = new_seq;
-    quality  = new_qual;
+    std::string new_seq  = sequence_.substr(start, end-start+1);
+    std::string new_qual = quality_.substr(start,  end-start+1);
+    ltrim_   += start;
+    rtrim_   += (sequence_.size()-1-end);
+    sequence_ = new_seq;
+    quality_  = new_qual;
   }
   else {
-    sequence = "";
-    quality  = "";
+    sequence_ = "";
+    quality_  = "";
+    ltrim_   += start;
   }
 }
